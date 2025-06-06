@@ -55,26 +55,25 @@ app.get('/api/logs/:filename', (req, res) => {
     const filePath = path.join(LOGS_DIR, filename);
     const content = fs.readFileSync(filePath, 'utf8');
     const allLines = content.split('\n');
-    
-    // Get the last N lines FIRST (where actual logs are), then filter
-    const recentLines = allLines.slice(-lines);
-    let filteredLines = recentLines;
+
+    // Keep track of original line numbers for accurate display
+    let filteredLines = allLines.map((line, index) => ({ line, lineNumber: index + 1 }));
     
     // Apply search filter
     if (search) {
       if (isRegexEnabled) {
         try {
           const searchRegex = new RegExp(search, 'i');
-          filteredLines = filteredLines.filter(line => searchRegex.test(line));
+          filteredLines = filteredLines.filter(item => searchRegex.test(item.line));
         } catch (e) {
           // If regex is invalid, fall back to normal search
-          filteredLines = filteredLines.filter(line => 
-            line.toLowerCase().includes(search.toLowerCase())
+          filteredLines = filteredLines.filter(item =>
+            item.line.toLowerCase().includes(search.toLowerCase())
           );
         }
       } else {
-        filteredLines = filteredLines.filter(line => 
-          line.toLowerCase().includes(search.toLowerCase())
+        filteredLines = filteredLines.filter(item =>
+          item.line.toLowerCase().includes(search.toLowerCase())
         );
       }
     }
@@ -82,20 +81,20 @@ app.get('/api/logs/:filename', (req, res) => {
     // Apply log level filter
     if (logLevel) {
       const levelPattern = new RegExp(`\\[${logLevel}\\]`, 'i');
-      filteredLines = filteredLines.filter(line => levelPattern.test(line));
+      filteredLines = filteredLines.filter(item => levelPattern.test(item.line));
     }
     
     // Apply context filter
     if (context) {
       const contextLower = context.toLowerCase();
       
-      filteredLines = filteredLines.filter(line => {
-        const lineLower = line.toLowerCase();
+      filteredLines = filteredLines.filter(item => {
+        const lineLower = item.line.toLowerCase();
         
         // Try multiple matching strategies
-        const jsonContextMatch = new RegExp(`"context":"[^"]*${context}[^"]*"`, 'i').test(line);
+        const jsonContextMatch = new RegExp(`"context":"[^"]*${context}[^"]*"`, 'i').test(item.line);
         const simpleTextMatch = lineLower.includes(contextLower);
-        const wordBoundaryMatch = new RegExp(`\\b${context}`, 'i').test(line);
+        const wordBoundaryMatch = new RegExp(`\\b${context}`, 'i').test(item.line);
         
         return jsonContextMatch || simpleTextMatch || wordBoundaryMatch;
       });
@@ -105,8 +104,8 @@ app.get('/api/logs/:filename', (req, res) => {
     if (severity) {
       const severityLevels = severity.split(',').map(s => s.trim().toLowerCase());
       
-      filteredLines = filteredLines.filter(line => {
-        const lineLevel = classifyLogLevel(line).toLowerCase();
+      filteredLines = filteredLines.filter(item => {
+        const lineLevel = classifyLogLevel(item.line).toLowerCase();
         return severityLevels.includes(lineLevel);
       });
     }
@@ -117,7 +116,7 @@ app.get('/api/logs/:filename', (req, res) => {
     if (regex && !isRegexEnabled) {
       try {
         const regexPattern = new RegExp(regex, 'i');
-        filteredLines = filteredLines.filter(line => regexPattern.test(line));
+        filteredLines = filteredLines.filter(item => regexPattern.test(item.line));
       } catch (e) {
         // If regex is invalid, ignore this filter
       }
@@ -125,25 +124,28 @@ app.get('/api/logs/:filename', (req, res) => {
     
 
     
-    // Add log level classification to each line
-    const classifiedLines = filteredLines.map((line, index) => {
+    const filteredCount = filteredLines.length;
+    const limitedLines = filteredLines.slice(-lines);
+
+    // Add log level classification to each remaining line
+    const classifiedLines = limitedLines.map(({ line, lineNumber }) => {
       const level = classifyLogLevel(line);
-      const context = extractContext(line);
-      const timestamp = extractTimestamp(line);
-      
+      const contextVal = extractContext(line);
+      const timestampVal = extractTimestamp(line);
+
       return {
         content: line,
         level: level,
-        timestamp: timestamp,
-        context: context,
-        lineNumber: allLines.length - recentLines.length + index + 1
+        timestamp: timestampVal,
+        context: contextVal,
+        lineNumber: lineNumber
       };
     });
     
     res.json({
       lines: classifiedLines,
       totalLines: allLines.length,
-      filteredLines: filteredLines.length,
+      filteredLines: filteredCount,
       filename: filename,
       appliedFilters: {
         search: search || null,
