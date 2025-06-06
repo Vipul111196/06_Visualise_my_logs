@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Enhanced NestJS Log Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .filter-section {
+            margin-bottom: 25px;
+        }
+
+        .filter-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 5px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .filter-chip {
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .filter-chip:hover {
+            background: #dee2e6;
+        }
+
+        .filter-chip.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .log-level-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .log-level-btn {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .log-level-btn.active {
+            color: white;
+            border-color: transparent;
+        }
+
+        .log-level-btn.error.active { background: #dc3545; }
+        .log-level-btn.warn.active { background: #ffc107; color: #212529; }
+        .log-level-btn.info.active { background: #17a2b8; }
+        .log-level-btn.debug.active { background: #6c757d; }
+
+        .clear-filters {
+            width: 100%;
+            padding: 10px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+
+        .clear-filters:hover {
+            background: #5a6268;
+        }
+
+        .content-area {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .log-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        .file-selector {
+            flex: 1;
+        }
+
+        .file-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .refresh-btn, .export-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover, .export-btn:hover {
+            background: #5a67d8;
+        }
+
+        .log-stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            height: 600px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            color: #d4d4d4;
+        }
+
+        .log-line {
+            padding: 4px 8px;
+            margin: 2px 0;
+            border-radius: 4px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-line:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-line.error {
+            background: rgba(220, 53, 69, 0.15);
+            border-left-color: #dc3545;
+            border-left-width: 4px;
+            color: #ff8a95;
+        }
+
+        .log-line.warn {
+            background: rgba(255, 193, 7, 0.15);
+            border-left-color: #ffc107;
+            border-left-width: 4px;
+            color: #ffeb3b;
+        }
+
+        .log-line.info {
+            background: rgba(23, 162, 184, 0.15);
+            border-left-color: #17a2b8;
+            border-left-width: 4px;
+            color: #64b5f6;
+        }
+
+        .log-line.debug {
+            background: rgba(108, 117, 125, 0.15);
+            border-left-color: #6c757d;
+            border-left-width: 4px;
+            color: #bcc5ce;
+        }
+
+        .log-line.typescript {
+            background: rgba(0, 122, 204, 0.15);
+            border-left-color: #007acc;
+            border-left-width: 4px;
+            color: #81c784;
+        }
+
+        .log-line.compilation {
+            background: rgba(255, 165, 0, 0.15);
+            border-left-color: #ffa500;
+            border-left-width: 4px;
+            color: #ffcc80;
+        }
+
+        .log-line.unknown {
+            background: rgba(156, 163, 175, 0.1);
+            border-left-color: #9ca3af;
+            border-left-width: 4px;
+            color: #d1d5db;
+        }
+
+        .log-line-number {
+            color: #8e9aaf;
+            margin-right: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            user-select: none;
+            background: rgba(142, 154, 175, 0.08);
+            padding: 1px 6px;
+            border-radius: 3px;
+            min-width: 40px;
+            display: inline-block;
+            text-align: right;
+        }
+
+        .log-level-icon {
+            margin-right: 8px;
+            font-size: 0.9rem;
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+        }
+
+        .log-timestamp {
+            color: #8e9aaf;
+            margin-right: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: rgba(142, 154, 175, 0.1);
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+
+        .log-context {
+            background: rgba(102, 126, 234, 0.3);
+            color: #8bb6ff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-right: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-logs {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+        }
+
+        .auto-refresh input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .applied-filters {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .applied-filters-title {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 5px;
+        }
+
+        .filter-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #2196f3;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px 4px;
+            gap: 5px;
+        }
+
+        .filter-tag .close-btn {
+            cursor: pointer;
+            padding: 0 2px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            font-size: 0.7rem;
+            transition: background 0.2s;
+        }
+
+        .filter-tag .close-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .log-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Enhanced NestJS Log Viewer</h1>
+            <p>Advanced filtering and real-time log monitoring</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="filter-section">
+                    <h3>🔍 Search & Filter</h3>
+                    
+                    <div class="filter-group">
+                        <label for="searchInput">Search Text</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="searchInput" placeholder="Search in logs..." style="flex: 1;">
+                            <button type="button" onclick="loadLogs()" style="padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🔍</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="regexMode"> Use Regex
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="contextFilter">Context Filter</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="contextFilter" placeholder="e.g., MemoryCompression, BackendMain" style="flex: 1;">
+                            <button type="button" onclick="loadLogs()" style="padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🔍</button>
+                        </div>
+                        <small style="color: #6c757d; font-size: 0.8rem; margin-top: 4px; display: block;">
+                            💡 Type slowly - filter applies after 1.2s pause, or click 🔍
+                        </small>
+                    </div>
+
+
+                </div>
+
+                <div class="filter-section">
+                    <h3>📊 Log Levels</h3>
+                    <div class="log-level-filters">
+                        <button class="log-level-btn error" data-level="error">🔴 Error</button>
+                        <button class="log-level-btn warn" data-level="warn">🟡 Warn</button>
+                        <button class="log-level-btn info" data-level="info">🔵 Info</button>
+                        <button class="log-level-btn debug" data-level="debug">⚪ Debug</button>
+                    </div>
+                </div>
+
+
+
+                <div class="filter-section">
+                    <h3>⚙️ Advanced</h3>
+                    
+                    <div class="filter-group">
+                        <label for="regexFilter">Custom Regex</label>
+                        <input type="text" id="regexFilter" placeholder="Custom regex pattern...">
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="lineCount">Max Lines</label>
+                        <select id="lineCount">
+                            <option value="100">100 lines</option>
+                            <option value="500">500 lines</option>
+                            <option value="1000" selected>1000 lines</option>
+                            <option value="2000">2000 lines</option>
+                            <option value="5000">5000 lines</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="clear-filters" onclick="clearAllFilters()">🗑️ Clear All Filters</button>
+            </div>
+
+            <div class="content-area">
+                <div class="log-controls">
+                    <div class="file-selector">
+                        <select id="fileSelect">
+                            <option value="">Select a log file...</option>
+                        </select>
+                    </div>
+                    <button class="refresh-btn" onclick="refreshLogs()">🔄 Refresh</button>
+                    <button class="export-btn" onclick="exportLogs()">📁 Export</button>
+                    <div class="auto-refresh">
+                        <input type="checkbox" id="autoRefresh">
+                        <label for="autoRefresh">Auto-refresh</label>
+                    </div>
+                    <div class="connection-status">
+                        <div class="status-indicator" id="connectionStatus"></div>
+                        <span id="connectionText">Disconnected</span>
+                    </div>
+                </div>
+
+                <div class="log-stats">
+                    <div class="stat-item">
+                        <span>📄 Total Lines:</span>
+                        <span class="stat-value" id="totalLines">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>🔍 Filtered:</span>
+                        <span class="stat-value" id="filteredLines">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>📊 Showing:</span>
+                        <span class="stat-value" id="showingLines">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>📁 File:</span>
+                        <span class="stat-value" id="currentFile">None</span>
+                    </div>
+                </div>
+
+                <div id="appliedFilters" class="applied-filters" style="display: none;">
+                    <div class="applied-filters-title">Active Filters:</div>
+                    <div id="filterTags"></div>
+                </div>
+
+                <div class="log-container" id="logContainer">
+                    <div class="no-logs">Select a log file to start viewing</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = '';
+        let autoRefreshInterval = null;
+        let activeFilters = new Set();
+        let ws = null;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLogFiles();
+            initializeWebSocket();
+            setupEventListeners();
+            
+            // Load logs if a file is already selected
+            const fileSelect = document.getElementById('fileSelect');
+            if (fileSelect.value) {
+                currentFile = fileSelect.value;
+                loadLogs();
+            }
+        });
+
+        function setupEventListeners() {
+            // File selection change
+            document.getElementById('fileSelect').addEventListener('change', function() {
+                currentFile = this.value;
+                if (currentFile) {
+                    loadLogs();
+                }
+            });
+
+            // Filter inputs with debounce
+            const filterInputs = ['searchInput', 'contextFilter', 'regexFilter'];
+            filterInputs.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    let timeout;
+                    element.addEventListener('input', function() {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            if (currentFile) loadLogs();
+                        }, 1200); // Increased from 500ms to 1200ms to allow finishing typing
+                    });
+                }
+            });
+
+            // Regex mode toggle
+            document.getElementById('regexMode').addEventListener('change', () => {
+                if (currentFile) loadLogs();
+            });
+
+            // Line count change
+            document.getElementById('lineCount').addEventListener('change', () => {
+                if (currentFile) loadLogs();
+            });
+
+            // Log level filters
+            document.querySelectorAll('.log-level-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const level = this.dataset.level;
+                    this.classList.toggle('active');
+                    
+                    if (this.classList.contains('active')) {
+                        activeFilters.add(level);
+                    } else {
+                        activeFilters.delete(level);
+                    }
+                    
+                    if (currentFile) loadLogs();
+                });
+            });
+
+            // Auto-refresh toggle
+            document.getElementById('autoRefresh').addEventListener('change', function() {
+                if (this.checked) {
+                    autoRefreshInterval = setInterval(() => {
+                        if (currentFile) loadLogs();
+                    }, 5000);
+                } else {
+                    clearInterval(autoRefreshInterval);
+                }
+            });
+        }
+
+        function initializeWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                document.getElementById('connectionStatus').classList.add('connected');
+                document.getElementById('connectionText').textContent = 'Connected';
+            };
+            
+            ws.onclose = function() {
+                document.getElementById('connectionStatus').classList.remove('connected');
+                document.getElementById('connectionText').textContent = 'Disconnected';
+                
+                // Reconnect after 3 seconds
+                setTimeout(initializeWebSocket, 3000);
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'fileChanged' && data.filename === currentFile) {
+                    loadLogs();
+                }
+            };
+        }
+
+        async function loadLogFiles() {
+            try {
+                const response = await fetch('/api/logs');
+                const files = await response.json();
+                
+                const fileSelect = document.getElementById('fileSelect');
+                fileSelect.innerHTML = '<option value="">Select a log file...</option>';
+                
+                files.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file.name;
+                    option.textContent = `${file.name} (${file.sizeFormatted})`;
+                    fileSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading log files:', error);
+            }
+        }
+
+        async function loadLogs() {
+            if (!currentFile) return;
+            
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = '<div class="loading">Loading logs...</div>';
+            
+            try {
+                const params = new URLSearchParams({
+                    lines: document.getElementById('lineCount').value,
+                    search: document.getElementById('searchInput').value,
+                    context: document.getElementById('contextFilter').value,
+                    regex: document.getElementById('regexFilter').value,
+                    isRegex: document.getElementById('regexMode').checked,
+                    severity: Array.from(activeFilters).join(',')
+                });
+                
+                const response = await fetch(`/api/logs/${currentFile}?${params}`);
+                const data = await response.json();
+                
+                displayLogs(data);
+                updateStats(data);
+                updateAppliedFilters(data.appliedFilters);
+                
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                logContainer.innerHTML = '<div class="no-logs">Error loading logs</div>';
+            }
+        }
+
+        function displayLogs(data) {
+            const logContainer = document.getElementById('logContainer');
+            
+            if (data.lines.length === 0) {
+                logContainer.innerHTML = '<div class="no-logs">No logs match the current filters</div>';
+                return;
+            }
+            
+            const levelIcons = {
+                'error': '🔴',
+                'warn': '🟡',
+                'info': '🔵',
+                'debug': '⚪',
+                'typescript': '🔷',
+                'compilation': '🔶',
+                'unknown': '⚫'
+            };
+            
+            const logsHtml = data.lines.map(line => {
+                const levelClass = line.level || 'unknown';
+                const levelIcon = levelIcons[levelClass] || '⚫';
+                const timestamp = line.timestamp ? `<span class="log-timestamp">${formatTimestamp(line.timestamp)}</span>` : '';
+                const context = line.context ? `<span class="log-context">${line.context}</span>` : '';
+                const lineNumber = `<span class="log-line-number">${line.lineNumber}</span>`;
+                const levelIndicator = `<span class="log-level-icon" title="${levelClass}">${levelIcon}</span>`;
+                
+                return `<div class="log-line ${levelClass}">
+                    ${lineNumber}${levelIndicator}${timestamp}${context}${escapeHtml(line.content)}
+                </div>`;
+            }).join('');
+            
+            logContainer.innerHTML = logsHtml;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalLines').textContent = data.totalLines.toLocaleString();
+            document.getElementById('filteredLines').textContent = data.filteredLines.toLocaleString();
+            document.getElementById('showingLines').textContent = data.lines.length.toLocaleString();
+            document.getElementById('currentFile').textContent = data.filename;
+        }
+
+        function updateAppliedFilters(filters) {
+            const appliedFiltersDiv = document.getElementById('appliedFilters');
+            const filterTagsDiv = document.getElementById('filterTags');
+            
+            const activeTags = [];
+            
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value) {
+                    const displayNames = {
+                        search: 'Search',
+                        logLevel: 'Level',
+                        context: 'Context',
+                        severity: 'Severity',
+                        regex: 'Regex'
+                    };
+                    
+                    if (displayNames[key]) {
+                        activeTags.push(`<span class="filter-tag">${displayNames[key]}: ${value} <span class="close-btn" onclick="removeFilter('${key}')">×</span></span>`);
+                    }
+                }
+            });
+            
+            if (activeTags.length > 0) {
+                filterTagsDiv.innerHTML = activeTags.join('');
+                appliedFiltersDiv.style.display = 'block';
+            } else {
+                appliedFiltersDiv.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterType) {
+            switch(filterType) {
+                case 'search':
+                    document.getElementById('searchInput').value = '';
+                    break;
+                case 'context':
+                    document.getElementById('contextFilter').value = '';
+                    break;
+                case 'regex':
+                    document.getElementById('regexFilter').value = '';
+                    break;
+                case 'severity':
+                    document.querySelectorAll('.log-level-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    activeFilters.clear();
+                    break;
+            }
+            
+            if (currentFile) loadLogs();
+        }
+
+        function formatTimestamp(timestamp) {
+            if (timestamp.includes('T')) {
+                // ISO format
+                return new Date(timestamp).toLocaleString();
+            }
+            return timestamp; // Already formatted time
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearAllFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('contextFilter').value = '';
+            document.getElementById('regexFilter').value = '';
+            document.getElementById('regexMode').checked = false;
+            
+            // Clear log level filters
+            document.querySelectorAll('.log-level-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            activeFilters.clear();
+            
+            if (currentFile) loadLogs();
+        }
+
+        function refreshLogs() {
+            loadLogFiles();
+            if (currentFile) loadLogs();
+        }
+
+        function exportLogs() {
+            if (!currentFile) {
+                alert('Please select a log file first');
+                return;
+            }
+            
+            const params = new URLSearchParams({
+                lines: document.getElementById('lineCount').value,
+                search: document.getElementById('searchInput').value,
+                context: document.getElementById('contextFilter').value,
+                regex: document.getElementById('regexFilter').value,
+                isRegex: document.getElementById('regexMode').checked,
+                severity: Array.from(activeFilters).join(',')
+            });
+            
+            fetch(`/api/logs/${currentFile}?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    const content = data.lines.map(line => line.content).join('\n');
+                    const blob = new Blob([content], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `filtered_${currentFile}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Error exporting logs:', error);
+                    alert('Error exporting logs');
+                });
+        }
+    </script>
+</body>
+</html> 

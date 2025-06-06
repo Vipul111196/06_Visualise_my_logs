@@ -1,0 +1,15 @@
+{
+  "name": "nestjs-log-viewer",
+  "version": "1.0.0",
+  "description": "Simple web-based log viewer for NestJS logs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "chokidar": "^3.5.3"
+  }
+} 
